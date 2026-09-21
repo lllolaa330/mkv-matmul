@@ -1,0 +1,26 @@
+name: q_proj_prefill
+operator: matmul
+
+shape:
+  M: 16
+  N: 2048
+  K: 2048
+
+dtype:
+  input: int8
+  weight: int8
+  accumulator: int32
+
+# 基地址单位：字节
+addresses:
+  input_base: 0x10000000
+  weight_base: 0x20000000
+  output_base: 0x30000000
+
+# 行步长单位：元素
+strides:
+  input: 2048
+  weight: 2048
+  output: 2048
+
+seed: 220266978
