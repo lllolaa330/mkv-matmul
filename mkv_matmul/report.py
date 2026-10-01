@@ -1,9 +1,11 @@
 import csv 
+import json
 from collections.abc import Iterator
 from pathlib import Path
 from dataclasses import asdict
+from pathlib import Path
 
-from .types import Schedule, CandidateResult
+from .types import Schedule, CandidateResult, HardwareSpec, MatMulProblem
 
 RAW_CANDIDATE_FIELDS = [
     "candidate_id",
@@ -102,3 +104,42 @@ def write_candidates(
                 row.update(asdict(result.cost)) # asdict: 把 dataclass 对象转换成字典
             
             writer.writerow(row)
+            
+def write_best_schedule(
+    problem: MatMulProblem,
+    hw: HardwareSpec,
+    best: CandidateResult,
+    path: str,
+) -> None:
+    """ 保存最佳方案、配置快照与预测成本 """
+    if not best.legal:
+        raise ValueError("不能保存非法候选为最佳方案")
+
+    if best.cost is None:
+        raise ValueError("最佳候选缺少成本")
+
+    payload = {
+        "schema_version": 1,
+        "cost_model": "serial_v1",
+        "problem": asdict(problem),
+        "hardware": asdict(hw),
+        "candidate_id": best.candidate_id,
+
+        # TODO：将对应的 dataclass 对象转换成字典
+        "schedule": asdict(best.schedule),
+        "buffer_usage": asdict(best.buffer_usage),
+        "cost": asdict(best.cost),
+    }
+
+    # TODO：将 payload 转换为排版后的 JSON 文本
+    text = json.dumps(
+        payload,
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+        allow_nan=False,
+    )
+
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(text + "\n", encoding="utf-8")
