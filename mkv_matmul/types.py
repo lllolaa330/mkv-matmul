@@ -81,3 +81,4 @@ class CandidateResult:
     buffer_usage  : BufferUsage
     legal         : bool  
     illegal_reason: str
+    cost: Cost | None = None

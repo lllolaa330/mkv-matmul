@@ -1,11 +1,13 @@
 from dataclasses import replace
 from pathlib import Path
-
+import csv
 import pytest
+from dataclasses import replace
+from pathlib import Path
 
-from mkv_matmul.config import load_problem, load_hardware
+from mkv_matmul.config import load_hardware, load_problem
+from mkv_matmul.report import write_candidates
 from mkv_matmul.search import evaluate_candidates
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,3 +46,56 @@ def test_evaluate_candidates_preserves_all_candidates(
         if result.legal
     ] == expected_legal_ids
     
+    for result in results:
+        if result.legal:
+            assert result.cost is not None
+            assert result.cost.total_cycles > 0
+            assert result.cost.total_cycles == (
+                result.cost.compute_cycles
+                + result.cost.dma_cycles
+            )
+        else:
+            assert result.cost is None
+    
+def test_write_candidates_leaves_illegal_costs_empty(tmp_path):
+    project_root = Path(__file__).resolve().parents[1]
+
+    problem = load_problem(
+        str(project_root / "examples" / "q_proj_prefill.yaml")
+    )
+    original_hw = load_hardware(
+        str(project_root / "examples" / "zcu104_16x16.yaml")
+    )
+    hw = replace(original_hw, weight_buffer_bytes=1024)
+
+    results = evaluate_candidates(problem, hw)
+
+    path = tmp_path / "candidates.csv"
+    write_candidates(results, str(path))
+
+    with path.open("r", encoding="utf-8", newline="") as file:
+        rows = list(csv.DictReader(file))
+
+    legal_rows = [row for row in rows if row["legal"] == "true"]
+    illegal_rows = [row for row in rows if row["legal"] == "false"]
+
+    assert len(legal_rows) == 4
+    assert len(illegal_rows) == 44
+
+    cost_fields = [
+        "total_cycles",
+        "compute_cycles",
+        "dma_cycles",
+        "input_bytes",
+        "weight_bytes",
+        "output_bytes",
+        "pe_utilization",
+    ]
+
+    for row in legal_rows:
+        assert all(row[field] != "" for field in cost_fields)
+        assert int(row["total_cycles"]) > 0
+
+    for row in illegal_rows:
+        assert all(row[field] == "" for field in cost_fields)
+        assert row["illegal_reason"] == "WEIGHT_BUFFER_OVERFLOW"

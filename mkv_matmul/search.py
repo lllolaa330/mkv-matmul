@@ -1,6 +1,7 @@
 from .candidates import enumerate_schedules
 from .legality import calculate_buffer_usage, check_legality
 from .types import CandidateResult, HardwareSpec, MatMulProblem
+from .cost import estimate_cost
 
 def evaluate_candidates(
     problem: MatMulProblem,
@@ -12,6 +13,11 @@ def evaluate_candidates(
         legal, reason = check_legality(problem, hw, schedule)
         usage = calculate_buffer_usage(hw, schedule)
         
+        cost = None
+        
+        if legal:
+            cost = estimate_cost(problem, hw, schedule)
+            
         results.append(
             CandidateResult(
               candidate_id = candidate_id,
@@ -19,6 +25,7 @@ def evaluate_candidates(
               buffer_usage = usage,
               legal = legal,
               illegal_reason = reason,
+              cost = cost,
             )
         )
         

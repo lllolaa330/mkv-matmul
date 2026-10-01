@@ -1,6 +1,7 @@
 import csv 
 from collections.abc import Iterator
 from pathlib import Path
+from dataclasses import asdict
 
 from .types import Schedule, CandidateResult
 
@@ -12,6 +13,16 @@ RAW_CANDIDATE_FIELDS = [
     "loop_order",
 ]
 
+COST_FIELDS = [
+    "total_cycles",
+    "compute_cycles",
+    "dma_cycles",
+    "input_bytes",
+    "weight_bytes",
+    "output_bytes",
+    "pe_utilization",
+]
+
 CANDIDATE_FIELDS = [
     "candidate_id",
     "tile_m",
@@ -19,11 +30,11 @@ CANDIDATE_FIELDS = [
     "tile_k",
     "loop_order",
     "legal",
-    "buffer_a_bytes",
+    "buffer_a_bytes",  # 输入数据需要的片上 buffer 容量
     "buffer_b_bytes",
     "buffer_c_bytes",
     "illegal_reason",
-]
+] + COST_FIELDS
 
 def write_raw_candidates(
     schedules: Iterable[Schedule],
@@ -71,7 +82,7 @@ def write_candidates(
         writer.writeheader()
 
         for result in results:
-            writer.writerow({
+            row = {
                 "candidate_id": result.candidate_id,
                 "tile_m": result.schedule.tile_m,
                 "tile_n": result.schedule.tile_n,
@@ -82,4 +93,12 @@ def write_candidates(
                 "buffer_b_bytes": result.buffer_usage.weight_bytes,
                 "buffer_c_bytes": result.buffer_usage.output_bytes,
                 "illegal_reason": result.illegal_reason,  
-            })
+            }
+            
+            for field in COST_FIELDS:
+                row[field] = ""
+            
+            if result.cost is not None:
+                row.update(asdict(result.cost)) # asdict: 把 dataclass 对象转换成字典
+            
+            writer.writerow(row)
