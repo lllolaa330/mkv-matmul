@@ -65,3 +65,19 @@ class Cost:
     weight_bytes   : int   # 小 buffer 可能被反复使用 所以总传输量可能大于 buffer 容量
     output_bytes   : int
     pe_utilization : float # 相较于计算阶段周期的有效 MAC 利用率
+    
+@dataclass(frozen=True)
+class BufferUsage:
+    """ 一个调度方案需要的物理 buffer 空间, 单位是字节 """
+    input_bytes : int
+    weight_bytes : int
+    output_bytes : int
+    
+@dataclass(frozen=True)
+class CandidateResult:
+    """ 一个原始候选及评价结果 """
+    candidate_id  : int
+    schedule      : Schedule
+    buffer_usage  : BufferUsage
+    legal         : bool  
+    illegal_reason: str
