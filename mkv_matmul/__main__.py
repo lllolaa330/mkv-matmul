@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .config import load_problem, load_hardware
 from .candidates import enumerate_schedules
-from .report import write_raw_candidates
+from .report import write_json, write_raw_candidates
 
 
 def build_parser():
@@ -48,20 +48,8 @@ def run_check_config(args):
         "hardware": asdict(hardware),
     }
 
-    output_dir = Path(args.output)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    summary_path = output_dir / "config_summary.json"
-
-    summary_path.write_text(
-        json.dumps(
-            summary,
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-        ) + "\n",
-        encoding="utf-8",
-    )
+    summary_path = Path(args.output) / "config_summary.json"
+    write_json(summary, str(summary_path))
 
     print("配置检查通过")
     print(f"问题：{problem.name}")

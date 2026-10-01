@@ -1,9 +1,8 @@
 import csv 
 import json
-from collections.abc import Iterator
+from collections.abc import Iterable
 from pathlib import Path
 from dataclasses import asdict
-from pathlib import Path
 
 from .types import Schedule, CandidateResult, HardwareSpec, MatMulProblem
 
@@ -43,67 +42,46 @@ def write_raw_candidates(
     path: str,
 ) -> None:
     """ 按原始顺序为候选编号,并写入csv """
-    output_path = Path(path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    rows = []
     
-    with output_path.open(
-        "w",
-        encoding = "utf-8",
-        newline="",
-    ) as file:
-        writer = csv.DictWriter(
-          file, 
-          fieldnames=RAW_CANDIDATE_FIELDS
-        )
-        writer.writeheader()
-        
-        for candidate_id, schedule in enumerate(schedules):
-            writer.writerow({
-                "candidate_id": candidate_id,
-                "tile_m": schedule.tile_m,
-                "tile_n": schedule.tile_n,
-                "tile_k": schedule.tile_k,
-                "loop_order": schedule.loop_order,
-            })
+    for candidate_id, schedule in enumerate(schedules):
+        rows.append({
+            "candidate_id" : candidate_id,
+            **asdict(schedule),
+        })
+
+    write_csv(rows, RAW_CANDIDATE_FIELDS, path)
+    
             
 def write_candidates(
     results: Iterable[CandidateResult],
     path: str,
 ) -> None:
     """ 写出全部候选的评价结果 """
+    rows = []
+    
+    for result in results:
+        row = {
+            "candidate_id": result.candidate_id,
+            **asdict(result.schedule),
+            "legal": "true" if result.legal else "false",
+            "buffer_a_bytes": result.buffer_usage.input_bytes,
+            "buffer_b_bytes": result.buffer_usage.weight_bytes,
+            "buffer_c_bytes": result.buffer_usage.output_bytes,
+            "illegal_reason": result.illegal_reason,
+        }
+        
+        for field in COST_FIELDS:
+            row[field] = ""
 
-    output_path = Path(path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with output_path.open(
-        "w",
-        encoding="utf-8",
-        newline="",
-    ) as file:
-        writer = csv.DictWriter(file, fieldnames=CANDIDATE_FIELDS)
-        writer.writeheader()
-
-        for result in results:
-            row = {
-                "candidate_id": result.candidate_id,
-                "tile_m": result.schedule.tile_m,
-                "tile_n": result.schedule.tile_n,
-                "tile_k": result.schedule.tile_k,
-                "loop_order": result.schedule.loop_order,
-                "legal": "true" if result.legal else "false",
-                "buffer_a_bytes": result.buffer_usage.input_bytes,
-                "buffer_b_bytes": result.buffer_usage.weight_bytes,
-                "buffer_c_bytes": result.buffer_usage.output_bytes,
-                "illegal_reason": result.illegal_reason,  
-            }
-            
-            for field in COST_FIELDS:
-                row[field] = ""
-            
-            if result.cost is not None:
-                row.update(asdict(result.cost)) # asdict: 把 dataclass 对象转换成字典
-            
-            writer.writerow(row)
+        if result.cost is not None:
+            row.update(asdict(result.cost))
+    
+        rows.append(row)
+    
+    # TODO 2：调用公共 CSV 写出函数，使用完整候选表的列定义
+    write_csv(rows, CANDIDATE_FIELDS, path)
+        
             
 def write_best_schedule(
     problem: MatMulProblem,
@@ -131,7 +109,14 @@ def write_best_schedule(
         "cost": asdict(best.cost),
     }
 
-    # TODO：将 payload 转换为排版后的 JSON 文本
+    write_json(payload, path)
+    
+def write_verification(result: dict, path: str) -> None:
+    """ 保存软件执行验证结果 """
+    write_json(result, path)
+    
+def write_json(payload: dict, path: str) -> None:
+    """ 将字典写成格式稳定的 JSON 文件 """
     text = json.dumps(
         payload,
         ensure_ascii=False,
@@ -139,7 +124,23 @@ def write_best_schedule(
         sort_keys=True,
         allow_nan=False,
     )
-
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(text + "\n", encoding="utf-8")
+
+
+def write_csv(
+    rows: Iterable[dict],
+    fields: list[str],
+    path: str,
+) -> None:
+    """ 按指定列顺序写出 CSV 表头和数据行 """
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with output_path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fields)
+        writer.writeheader()
+
+        # TODO 1：一次写出 rows 中的全部记录
+        writer.writerows(rows)
