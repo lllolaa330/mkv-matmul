@@ -4,7 +4,7 @@ from .types import (
     MatMulProblem,
     Schedule,
 )
-from .descriptor import(
+from .descriptor_layout import(
     BASE_BITS,
     DIM_BITS,
     STRIDE_BITS,

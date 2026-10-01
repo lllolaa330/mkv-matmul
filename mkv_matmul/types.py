@@ -82,3 +82,10 @@ class CandidateResult:
     legal         : bool  
     illegal_reason: str
     cost: Cost | None = None
+    
+@dataclass(frozen=True)
+class DecodedDescriptor:
+    """ 从二进制描述符恢复的执行参数 """
+    problem: MatMulProblem
+    schedule: Schedule
+    flags: int
