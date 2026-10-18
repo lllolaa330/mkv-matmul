@@ -115,3 +115,15 @@ def test_decode_descriptor_rejects_invalid_fields(
 
     with pytest.raises(ValueError, match=expected_message):
         decode_descriptor(bytes(data))
+        
+def test_descriptor_tile_fields_follow_protocol(descriptor_context):
+    problem, original_hw, _ = descriptor_context
+    hw = replace(original_hw, weight_buffer_bytes=65536)
+
+    schedule = Schedule(4, 32, 64)
+    encoded = encode_descriptor(problem, hw, schedule)
+
+    # 协议规定：偏移 24、26、28 分别是 tile_m、tile_n、tile_k
+    assert encoded[24:30] == bytes.fromhex(
+        "04 00 20 00 40 00"
+    )

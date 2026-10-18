@@ -20,14 +20,23 @@ def load_yaml(path: str) -> dict:
         
     return data
   
-def require_mapping(data: dict, key: str, location: str) -> dict:
-    """ 取得必需的字典字段 否则报错 """
+def require_field(
+    data: dict,
+    key: str,
+    location: str,
+) -> object:
+    """ 取得必需字段的原始值，缺失时报告字段路径 """
     field_path = f"{location}.{key}"
     
     if key not in data:
         raise ValueError(f"{field_path}: 缺少必需字段")
-      
-    value = data[key]
+
+    return data[key]
+  
+def require_mapping(data: dict, key: str, location: str) -> dict:
+    """ 取得必需的字典字段 否则报错 """
+    value = require_field(data, key, location)
+    field_path = f"{location}.{key}"
     
     if not isinstance(value, dict):
         raise ValueError(f"{field_path}: 必须是映射")
@@ -40,12 +49,8 @@ def require_int(data: dict,
                 minimum: int,
                 ) -> int:
     """ 取得必需的整数字段 并检查最小值 """
+    value = require_field(data, key, location)
     field_path = f"{location}.{key}"
-    
-    if key not in data:
-        raise ValueError(f"{field_path}: 缺少必需字段")
-      
-    value = data[key]
     
     if type(value) is not int:
         raise ValueError(f"{field_path}: 必须是整数 不能是布尔值")
@@ -57,12 +62,8 @@ def require_int(data: dict,
   
 def require_string(data: dict, key: str, location: str) -> str:
     """ 取得必需的非空字符串 """
+    value = require_field(data, key, location)
     field_path = f"{location}.{key}"
-    
-    if key not in data:
-        raise ValueError(f"{field_path}: 缺少必需字段")
-      
-    value = data[key]
     
     if not isinstance(value, str):
         raise ValueError(f"{field_path}: 必须是字符串")
@@ -74,12 +75,8 @@ def require_string(data: dict, key: str, location: str) -> str:
   
 def require_bool(data: dict, key: str, location: str) -> bool:
     """ 取得必需的 bool 字段 """
+    value = require_field(data, key, location)
     field_path = f"{location}.{key}"
-    
-    if key not in data:
-            raise ValueError(f"{field_path}: 缺少必需字段")
-          
-    value = data[key]
     
     if type(value) is not bool:
         raise ValueError(f"{field_path}: 必须是布尔值")
@@ -88,12 +85,8 @@ def require_bool(data: dict, key: str, location: str) -> bool:
     
 def require_int_tuple(data: dict, key: str, location: str) -> tuple[int, ...]:
     """ 读取非空、无重复的正整数列表 list, 并转换为元组 tuple """
+    values = require_field(data, key, location)
     field_path = f"{location}.{key}"
-        
-    if key not in data:
-                raise ValueError(f"{field_path}: 缺少必需字段")
-              
-    values = data[key]
     
     if not isinstance(values, list):
         raise ValueError(f"{field_path}: 必须是 list")

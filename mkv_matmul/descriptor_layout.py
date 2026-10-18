@@ -10,15 +10,29 @@ DESCRIPTOR_VERSION = 1
 OPCODE_MATMUL = 1
 MODE_MNK = 0
 
-DESCRIPTOR_STRUCT = struct.Struct(
-    "<IHBBIIIIHHHHQQQHHHH"
-)
+DESCRIPTOR_STRUCT = struct.Struct("<IHBBIIIIHHHHQQQHHHH")
 # < 小端序 固定标准宽度 不自动插入对齐填充
 # B 1字节无符号整数
 # H 2字节无符号整数
 # I 4字节无符号整数
 # Q 8字节无符号整数
 # IHBB 8 + IIII 16 + HHHH 8 + QQQ 24 + HHHH 8 = 64 字节
+
+PROBLEM_FIELDS = (
+    "M", "N", "K",
+    "input_base", "weight_base", "output_base",
+    "input_stride", "weight_stride", "output_stride",
+)
+
+TILE_FIELDS = ("tile_m", "tile_n", "tile_k")
+
+DESCRIPTOR_FIELDS = (
+    "magic", "version", "opcode", "mode", "flags",
+    "M", "N", "K",
+    "tile_m", "tile_n", "tile_k", "reserved0",
+    "input_base", "weight_base", "output_base",
+    "input_stride", "weight_stride", "output_stride", "reserved1",
+)
 
 def fits_unsigned(value: int, bits: int) -> bool:
     """ 检查数值能否表示为指定位宽的无符号整数 """
